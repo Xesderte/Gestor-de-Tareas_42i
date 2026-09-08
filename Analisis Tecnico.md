@@ -20,11 +20,12 @@ Cada una de las Tareas y Subtareas cuenta con:
   * **h1.** **Peso Individual:** `1` (Cada Tarea y Subtarea pesa 1).
   * **h2.** **Peso Grupal:** La suma del peso total de cada uno de sus hijos. (Si no tiene hijos su peso es `0`).
   * **h3.** **Peso Total:** Es la suma del Peso Individual y el Peso Grupal.
-  * **h4.** **Tareas Terminada:** `boolean` (`True` si la tarea está terminada, `false` si la tarea no está terminada).
+  * **h4.** **Tarea Terminada:** `boolean` (`True` si la tarea está terminada, `false` si la tarea no está terminada).
   * **h5.** **Esfuerzo:** El esfuerzo de cada una de las subtareas se calcula en función al peso.
-  * **h6.** **Final Total:** Cantidad de tareas terminadas. 
-  * **h7.** Padre (la Tarea de la que procede o de donde se origina).
-  * **h8.** Hijos (Subtareas).
+  * **h6.** **Final Total:** Cantidad de tareas terminadas.
+  * **h7.** **Progreso Individual:** FinalTotal / PesoTotal. 
+* **i.** **Padre:** (la Tarea de la que procede o de donde se origina).
+* **j.** **Hijos:** Subtareas.
 
 ---
 
@@ -48,11 +49,31 @@ Sabemos que las subtareas de A son AB, AB1 y AB2:
 
 ### Cálculo del Progreso
 * **Para calcular el progreso de toda la actividad:**
-  Se toma el $PT(A)$ (Tarea A, el padre principal) y la Final Total de cada uno de sus hijos directos:
-  $$\frac{\text{FinalTotal}(AB) + \text{FinalTotal}(AB1) + \text{FinalTotal}(AB2)}{PT(A)} = \text{Progreso de la Actividad}$$
+  Se toma el $PT(A)$ (Tarea A, el padre principal) y la Final Total(A), de cada uno de sus hijos directos:
+
+
+  Con respecto a las subtareas que se realizan, se toma el $PT$ y la Final Total de cada uno de sus hijos directos:
+  $$
+  \text{Final Total}(A) = \text{Final Total}(AB) + \text{Final Total}(AB1) + \text{Final Total}(AB2) = 5
+  $$
+  (Si es que todas las subtareas están terminadas da 5, si no están terminadas da otro número menor a PG y mayor a 0).
+
+  Con respecto a sí mismo (si es que termina su propia tarea):
+  $$
+  \text{Final Total}(A) = \text{Final Total}(A) + 1 = 6
+  $$
+  (Para poder terminar su propia tarea, sí o sí las subtareas deben estar terminadas, si es que tiene subtareas).
+
+  > **Nota:** Si $PT(A) = FT(A) \implies$ Todas las tareas y subtareas están terminadas, inclusive la que es en sí misma.
+
+  $$
+  \frac{\text{Final Total}(A)}{PT(A)} = \text{Progreso de la Actividad}
+  $$
 
 * **Calcular el progreso de Cada Subtarea:** se utiliza la misma fórmula para el progreso principal pero esta vez para cada subtarea. Se toma el $PT(AB)$ (Tarea AB, el padre de las subtareas) y la Final Total de cada uno de sus hijos directos:
-  $$\frac{\text{FinalTotal}(ABC) + \text{FinalTotal}(ABC1)}{PT(AB)} = \text{Progreso de la Subtarea AB}$$
+  $$
+  \frac{\text{Final Total}(ABC) + \text{Final Total}(ABC1)}{PT(AB)} = \text{Progreso de la Subtarea AB}
+  $$
 
 > *Nota:* Si una tarea no tiene hijos, su $PT = PI$ y su $PG = 0$, y por lo tanto su $PG$ es `0`, ($PI = 1$) $\Rightarrow$ ($PT = 1$).
 
