@@ -77,7 +77,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ parentId, onCancel, onTaskCreated, 
       >
         <div className="flex justify-between items-center px-4 py-3 border-b border-slate-100 bg-slate-50">
           <h2 className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
-            Crear Tarea 
+            {parentId ? 'Crear' : 'Crear Tarea'}
             {parentId && <span className="bg-slate-900 text-white text-[10px] px-2 py-0.5 rounded uppercase tracking-wider font-bold">Subtarea</span>}
           </h2>
           <button 
@@ -134,7 +134,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ parentId, onCancel, onTaskCreated, 
               className="text-xs font-bold text-slate-700 cursor-pointer select-none flex gap-1" 
               onClick={() => setIsUrgent(!isUrgent)}
             >
-              Marcar como <span className="text-amber-500 font-extrabold">Urgente</span>
+              {!parentId && "Marcar como "}
+              <span className="text-amber-500 font-extrabold">Urgente</span>
             </label>
           </div>
 

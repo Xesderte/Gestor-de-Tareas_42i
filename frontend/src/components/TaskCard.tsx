@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { GitBranch, Plus, Zap, Scale, Calendar, ChevronDown, Activity } from 'lucide-react';
 import type { Task } from '../api/taskService';
-import { toggleTaskUrgency, getTaskById } from '../api/taskService';
+import { toggleTaskUrgency, getTaskById, toggleTaskComplete } from '../api/taskService';
 import TaskForm from './TaskForm';
 
 interface TaskCardProps {
@@ -36,6 +36,27 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
       setLocalTask(prev => ({ ...prev, indicador_urgencia: updatedTask.indicador_urgencia }));
     } catch (error) {
       console.error('Error al cambiar urgencia:', error);
+    }
+  };
+
+  const handleToggleComplete = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    const isCompleted = e.target.checked;
+    
+    // Si tiene hijos y no están todos completados, backend lo rechazará, 
+    // pero podemos prevenir clicks inútiles si final_total < peso_grupal
+    if (isCompleted && localTask.final_total < localTask.peso_grupal) {
+      alert("No puedes completar esta tarea porque tiene subtareas pendientes.");
+      return;
+    }
+
+    try {
+      const updatedTask = await toggleTaskComplete(localTask.id, isCompleted);
+      setLocalTask(updatedTask);
+      onUpdate(); // Para propagar los cambios de FT hacia arriba
+    } catch (error) {
+      console.error('Error al cambiar estado completado:', error);
+      alert("Hubo un error al intentar completar la tarea. Por favor, verifica las subtareas.");
     }
   };
 
@@ -101,11 +122,18 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
           ${isExpanded ? 'shadow-md' : ''}`}
       >
         <div className="p-4 pr-16 relative">
-          {/* Fila de Arriba: Titulo */}
-          <h3 className="text-base font-bold text-white leading-tight pr-4 break-words">
-            {localTask.titulo}
-          </h3>
-
+          {/* Fila de Arriba: Titulo y Checkbox */}
+          <div className="flex items-start gap-3 pr-4" onClick={(e) => e.stopPropagation()}>
+            <input 
+              type="checkbox" 
+              className="mt-1 w-4 h-4 rounded text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900 bg-slate-800 border-slate-600 cursor-pointer" 
+              checked={localTask.estado === 'completado'} 
+              onChange={handleToggleComplete} 
+            />
+            <h3 className={`text-base font-bold leading-tight break-words transition-colors ${localTask.estado === 'completado' ? 'text-slate-400 line-through' : 'text-white'}`}>
+              {localTask.titulo}
+            </h3>
+          </div>
           {/* Fila del Medio: Métricas (Debajo del título) */}
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             {getStatusBadge(localTask.estado)}
@@ -128,6 +156,14 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
                 <span>{localTask.esfuerzo_relativo ?? 0}/{localTask.esfuerzo_total ?? 0}</span>
               </div>
             )}
+          </div>
+
+          {/* Barra de Progreso */}
+          <div className="mt-3 w-full bg-slate-800 rounded-full h-1.5 border border-slate-700 overflow-hidden">
+            <div 
+              className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500 ease-out" 
+              style={{ width: `${localTask.peso_total > 0 ? Math.min(100, (localTask.final_total / localTask.peso_total) * 100) : 0}%` }}
+            ></div>
           </div>
 
           {/* Fila de Abajo (Expandible): Descripción */}
@@ -175,7 +211,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
       </div>
 
       {/* Árbol de Hijos (Recursión e Indentación Visual) */}
-      {(isTreeOpen && !isAddingSubtask) && (
+      {(isTreeOpen && !isAddingSubtask && children.length > 0) && (
         <div className="ml-6 relative mt-0">
             {/* Dot origen (en la base del padre) */}
             <div className="absolute left-0 -top-1.5 w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)] z-50" style={{ transform: 'translateX(-4.5px)' }}></div>

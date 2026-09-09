@@ -38,6 +38,16 @@ export const getRootTasks = async (): Promise<Task[]> => {
     }
 };
 
+export const toggleTaskComplete = async (taskId: string, completed: boolean): Promise<Task> => {
+    try {
+        const response = await apiClient.patch<Task>(`/${taskId}/complete`, { completed });
+        return response.data;
+    } catch (error) {
+        console.error('Error al marcar tarea como completada:', error);
+        throw error;
+    }
+};
+
 export const createRootTask = async (data: CreateTaskDTO): Promise<Task> => {
     try {
         const response = await apiClient.post<Task>('/', data);

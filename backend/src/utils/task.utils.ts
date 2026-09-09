@@ -31,3 +31,44 @@ export const PropagarIncrementoPeso = async (tareaId: string | number | null, de
         await PropagarIncrementoPeso(tarea.padre_id, delta);
     }
 };
+
+/**
+ * Propaga recursivamente el avance del progreso (final_total) de manera bottom-up.
+ * También deduce y actualiza el estado (pendiente, en progreso, completado) de la tarea.
+ * 
+ * @param tareaId El ID de la tarea a procesar.
+ * @param delta El progreso a sumar al final_total (+1 si se completa una hoja, -1 si se desmarca).
+ */
+export const PropagarAvanceProgreso = async (tareaId: string | number | null, delta: number): Promise<void> => {
+    if (!tareaId) return;
+
+    const tarea = await Task.findByPk(tareaId);
+    if (!tarea) return;
+
+    // Sumamos al final_total actual
+    const nuevoFinalTotal = tarea.final_total + delta;
+    
+    // Evitar que baje de 0 o supere el peso_total por seguridad (aunque matemáticamente debería ser exacto)
+    const finalTotalSeguro = Math.max(0, Math.min(nuevoFinalTotal, tarea.peso_total));
+
+    // Determinar nuevo estado
+    let nuevoEstado = 'pendiente';
+    if (finalTotalSeguro === 0) {
+        nuevoEstado = 'pendiente';
+    } else if (finalTotalSeguro === tarea.peso_total) {
+        nuevoEstado = 'completado';
+    } else {
+        nuevoEstado = 'en progreso';
+    }
+
+    // Actualizamos la tarea directamente
+    await tarea.update({
+        final_total: finalTotalSeguro,
+        estado: nuevoEstado
+    });
+
+    // Recursividad hacia el padre
+    if (tarea.padre_id !== null) {
+        await PropagarAvanceProgreso(tarea.padre_id, delta);
+    }
+};

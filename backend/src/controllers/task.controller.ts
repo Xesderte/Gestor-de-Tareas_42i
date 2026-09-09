@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Task } from '../db';
-import { PropagarIncrementoPeso } from '../utils/task.utils';
+import { PropagarIncrementoPeso, PropagarAvanceProgreso } from '../utils/task.utils';
 
 export const createRootTask = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -166,3 +166,45 @@ export const getTaskById = async (req: Request, res: Response): Promise<void> =>
         res.status(500).json({ message: 'Error interno del servidor al obtener la tarea' });
     }
 };
+
+export const toggleTaskComplete = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const { completed } = req.body; // boolean
+
+        const task = await Task.findByPk(id as string);
+
+        if (!task) {
+            res.status(404).json({ message: 'Tarea no encontrada' });
+            return;
+        }
+
+        const isCurrentlyCompleted = task.estado === 'completado';
+
+        // Si ya está en el estado deseado, no hacemos nada
+        if (completed === isCurrentlyCompleted) {
+            res.status(200).json(task);
+            return;
+        }
+
+        if (completed) {
+            // Validación bottom-up: no se puede completar si sus hijos no están todos completados
+            // Los hijos aportan 'peso_grupal' en total. Si su aporte no está completo, final_total será menor a peso_grupal.
+            if (task.final_total < task.peso_grupal) {
+                res.status(400).json({ message: 'No se puede completar la tarea porque tiene subtareas pendientes.' });
+                return;
+            }
+            await PropagarAvanceProgreso(task.id, 1);
+        } else {
+            // Si la desmarcamos, restamos 1 al árbol
+            await PropagarAvanceProgreso(task.id, -1);
+        }
+
+        const updatedTask = await Task.findByPk(id as string);
+        res.status(200).json(updatedTask);
+    } catch (error) {
+        console.error('Error al cambiar el estado de completado:', error);
+        res.status(500).json({ message: 'Error interno del servidor al actualizar la tarea' });
+    }
+};
+
