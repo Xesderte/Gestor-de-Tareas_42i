@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Task } from '../db';
+import { PropagarIncrementoPeso } from '../utils/task.utils';
 
 export const createRootTask = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -58,5 +59,33 @@ export const toggleUrgencyTask = async (req: Request, res: Response): Promise<vo
     } catch (error) {
         console.error('Error al modificar la urgencia de la tarea:', error);
         res.status(500).json({ message: 'Error interno del servidor al actualizar la tarea' });
+    }
+};
+
+export const createSubtask = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const { titulo, descripcion, indicador_urgencia } = req.body;
+
+        const parentTask = await Task.findByPk(id as string);
+        
+        if (!parentTask) {
+            res.status(404).json({ message: 'La tarea padre no existe' });
+            return;
+        }
+
+        const newSubtask = await Task.create({
+            titulo,
+            descripcion,
+            indicador_urgencia,
+            padre_id: id
+        });
+
+        await PropagarIncrementoPeso(id as string, 1);
+
+        res.status(201).json(newSubtask);
+    } catch (error) {
+        console.error('Error al crear subtarea:', error);
+        res.status(500).json({ message: 'Error interno del servidor al crear la subtarea' });
     }
 };
