@@ -2,10 +2,15 @@ import React, { useEffect, useState } from 'react';
 import type { Task } from '../api/taskService';
 import { getRootTasks, toggleTaskUrgency } from '../api/taskService';
 
-const TaskList: React.FC = () => {
+interface TaskListProps {
+  refreshKey?: number;
+}
+
+const TaskList: React.FC<TaskListProps> = ({ refreshKey = 0 }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [filterUrgent, setFilterUrgent] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -20,7 +25,7 @@ const TaskList: React.FC = () => {
     };
 
     fetchTasks();
-  }, []);
+  }, [refreshKey]);
 
   const handleToggleUrgency = async (e: React.MouseEvent, id: string, currentUrgency: boolean) => {
     e.stopPropagation(); // Evita que el clic expanda/contraiga la tarjeta
@@ -65,9 +70,29 @@ const TaskList: React.FC = () => {
     }
   };
 
+  const filteredTasks = filterUrgent ? tasks.filter(t => t.indicador_urgencia) : tasks;
+
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 items-start">
-      {tasks.map((task) => {
+    <div className="w-full max-w-3xl flex flex-col items-start">
+      {/* Botón Filtro de Urgencia */}
+      <div className="mb-6">
+        <button
+          onClick={() => setFilterUrgent(!filterUrgent)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-300 border shadow-sm w-fit ${
+            filterUrgent
+              ? 'bg-amber-100 text-amber-700 border-amber-300 shadow-amber-100/50 hover:bg-amber-200'
+              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
+          }`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill={filterUrgent ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Filtrar Urgentes
+        </button>
+      </div>
+
+      <div className="w-full space-y-5">
+      {filteredTasks.map((task) => {
         const isExpanded = expandedId === task.id;
         const isUrgent = !!task.indicador_urgencia;
 
@@ -75,18 +100,28 @@ const TaskList: React.FC = () => {
           <div 
             key={task.id} 
             onClick={() => setExpandedId(isExpanded ? null : task.id)}
-            className={`bg-white rounded-2xl shadow-sm border transition-all duration-300 cursor-pointer overflow-hidden group hover:shadow-md
+            className={`w-72 bg-white rounded-2xl shadow-sm border transition-all duration-300 cursor-pointer overflow-hidden group hover:shadow-md flex-shrink-0
               ${isExpanded ? 'border-blue-300 shadow-blue-100' : 'border-slate-200 hover:border-blue-200'}`}
           >
             {/* Header siempre visible */}
-            <div className="p-6 pb-4">
-              <div className="flex justify-between items-start mb-4">
-                {getStatusBadge(task.estado)}
+            <div className="p-4 pb-3">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center gap-3">
+                  {getStatusBadge(task.estado)}
+                  {task.peso_total > 0 && (
+                    <span className="flex items-center gap-1 text-xs font-bold text-slate-500" title="Peso Total Estimado">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                      </svg>
+                      PT: {task.peso_total}
+                    </span>
+                  )}
+                </div>
                 
                 {/* Botón de Urgencia */}
                 <button 
                   onClick={(e) => handleToggleUrgency(e, task.id, isUrgent)}
-                  className={`p-2 rounded-full transition-all duration-300 -mr-2 -mt-2 ${
+                  className={`p-1.5 rounded-full transition-all duration-300 -mr-1 -mt-1 ${
                     isUrgent 
                       ? 'text-amber-500 bg-amber-50 hover:bg-amber-100 hover:scale-110 shadow-sm' 
                       : 'text-slate-300 hover:text-amber-500 hover:bg-slate-50'
@@ -99,19 +134,19 @@ const TaskList: React.FC = () => {
                 </button>
               </div>
               
-              <h3 className="text-lg font-bold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors duration-200">
+              <h3 className="text-base font-bold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors duration-200 whitespace-normal break-words">
                 {task.titulo}
               </h3>
             </div>
 
             {/* Contenido expandible (Acordeón) */}
             <div 
-              className={`px-6 overflow-hidden transition-all duration-300 ease-in-out ${
-                isExpanded ? 'max-h-96 opacity-100 pb-6' : 'max-h-0 opacity-0'
+              className={`px-4 overflow-hidden transition-all duration-300 ease-in-out ${
+                isExpanded ? 'max-h-96 opacity-100 pb-4' : 'max-h-0 opacity-0'
               }`}
             >
-              <div className="border-t border-slate-100 pt-4 mt-2">
-                <p className="text-slate-600 text-sm leading-relaxed mb-5">
+              <div className="border-t border-slate-100 pt-3 mt-1">
+                <p className="text-slate-600 text-sm leading-relaxed mb-4">
                   {task.descripcion}
                 </p>
                 <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
@@ -121,28 +156,20 @@ const TaskList: React.FC = () => {
                     </svg>
                     {new Date(task.createdAt).toLocaleDateString()}
                   </span>
-                  
-                  {task.peso_total > 0 && (
-                    <span className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-md text-slate-600 border border-slate-100" title="Peso Total Estimado">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                      </svg>
-                      PT: {task.peso_total}
-                    </span>
-                  )}
                 </div>
               </div>
             </div>
             
             {/* Indicador sutil de clic para expandir */}
             {!isExpanded && (
-              <div className="px-6 pb-4">
+              <div className="px-4 pb-3">
                 <div className="h-1 w-8 bg-slate-200 rounded-full mx-auto group-hover:bg-blue-300 transition-colors"></div>
               </div>
             )}
           </div>
         );
       })}
+      </div>
     </div>
   );
 };
