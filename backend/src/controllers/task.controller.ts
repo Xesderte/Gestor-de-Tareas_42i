@@ -93,3 +93,64 @@ export const createSubtask = async (req: Request, res: Response): Promise<void> 
         res.status(500).json({ message: 'Error interno del servidor al crear la subtarea' });
     }
 };
+
+const getRootTask = async (taskId: string): Promise<Task | null> => {
+    let currentTask: Task | null = await Task.findByPk(taskId);
+    if (!currentTask) return null;
+    
+    while (currentTask && currentTask.padre_id !== null) {
+        const parentTask: Task | null = await Task.findByPk(currentTask.padre_id);
+        if (!parentTask) break;
+        currentTask = parentTask;
+    }
+    return currentTask;
+};
+
+const buildTaskTree = async (taskId: string, ptRaiz: number): Promise<any> => {
+    const tarea = await Task.findByPk(taskId);
+    if (!tarea) return null;
+
+    const hijos = await Task.findAll({ where: { padre_id: taskId } });
+    
+    const hijosData = [];
+    for (const h of hijos) {
+        const hijoTree = await buildTaskTree(h.id, ptRaiz);
+        if (hijoTree) hijosData.push(hijoTree);
+    }
+
+    // Fórmulas de Análisis Técnico (Métricas derivadas - Escala del 0 al 10 con redondeo)
+    const esfuerzo_total = ptRaiz === 0 ? 0 : Math.round((tarea.peso_total / ptRaiz) * 10);
+    const esfuerzo_relativo = ptRaiz === 0 ? 0 : Math.round(((tarea.peso_total - tarea.final_total) / ptRaiz) * 10);
+
+    return {
+        ...tarea.toJSON(),
+        hijos: hijosData,
+        esfuerzo_total,
+        esfuerzo_relativo
+    };
+};
+
+export const getTaskById = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        
+        // Verificamos si existe la tarea inicial
+        const task = await Task.findByPk(id as string);
+        if (!task) {
+            res.status(404).json({ message: 'Tarea no encontrada' });
+            return;
+        }
+
+        // Buscamos la raíz para obtener el PT maestro
+        const rootTask = await getRootTask(id as string);
+        const ptRaiz = rootTask ? rootTask.peso_total : 0;
+        
+        // Construimos el árbol inyectando las métricas calculadas
+        const taskTree = await buildTaskTree(id as string, ptRaiz);
+
+        res.status(200).json(taskTree);
+    } catch (error) {
+        console.error('Error al obtener la tarea y su árbol:', error);
+        res.status(500).json({ message: 'Error interno del servidor al obtener la tarea' });
+    }
+};
