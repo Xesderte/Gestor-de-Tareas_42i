@@ -9,19 +9,19 @@ export const sequelize = new Sequelize({
 
 // Definimos el modelo
 export class Task extends Model {
-    public id!: string;
-    public titulo!: string;
-    public descripcion!: string;
-    public estado!: string;
-    public indicador_urgencia!: boolean;
+    declare public id: string;
+    declare public titulo: string;
+    declare public descripcion: string;
+    declare public estado: string;
+    declare public indicador_urgencia: boolean;
 
-    public padre_id!: string | null;
+    declare public padre_id: string | null;
 
     // Métricas
-    public peso_individual!: number;
-    public peso_grupal!: number;
-    public peso_total!: number;
-    public final_total!: number;
+    declare public peso_individual: number;
+    declare public peso_grupal: number;
+    declare public peso_total: number;
+    declare public final_total: number;
 }
 
 Task.init(

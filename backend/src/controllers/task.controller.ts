@@ -78,7 +78,11 @@ export const createSubtask = async (req: Request, res: Response): Promise<void> 
             titulo,
             descripcion,
             indicador_urgencia,
-            padre_id: id
+            padre_id: id,
+            peso_individual: 1,
+            peso_grupal: 0,
+            peso_total: 1,
+            final_total: 0
         });
 
         await PropagarIncrementoPeso(id as string, 1);

@@ -91,3 +91,38 @@
     "updatedAt": "date-time"
   }
   ```
+
+---
+
+## Iteración 2: Árbol de Subtareas
+
+### 4. Crear Subtarea
+
+* **Descripción:** Crea una nueva subtarea hija dependiente de una tarea padre existente en el sistema. Esta acción dispara automáticamente el recálculo matemático de pesos (peso_grupal y peso_total) en el padre y ancestros mediante un burbujeo ascendente.
+* **Ruta:** `http://localhost:3001/api/tasks/:id/subtasks`
+* **Método:** POST
+* **Cuerpo de la Petición (JSON Input):**
+  ```
+  {
+    "titulo": "string",
+    "descripcion": "string",
+    "indicador_urgencia": "boolean"
+  }
+  ```
+* **Respuesta Esperada (Output):**
+  ```
+  {
+    "id": "UUID",
+    "titulo": "string",
+    "descripcion": "string",
+    "estado": "string",
+    "indicador_urgencia": "boolean",
+    "padre_id": "UUID",
+    "peso_individual": "integer",
+    "peso_grupal": "integer",
+    "peso_total": "integer",
+    "final_total": "integer",
+    "createdAt": "date-time",
+    "updatedAt": "date-time"
+  }
+  ```
