@@ -13,7 +13,7 @@ export class Task extends Model {
     public titulo!: string;
     public descripcion!: string;
     public estado!: string;
-    public indicador_urgencia!: string | null;
+    public indicador_urgencia!: boolean;
 
     public padre_id!: string | null;
 
@@ -34,7 +34,7 @@ Task.init(
         titulo: { type: DataTypes.STRING, allowNull: false },
         descripcion: { type: DataTypes.TEXT, allowNull: false },
         estado: { type: DataTypes.STRING, defaultValue: 'pendiente' },
-        indicador_urgencia: { type: DataTypes.STRING, allowNull: true },
+        indicador_urgencia: { type: DataTypes.BOOLEAN, defaultValue: false },
 
         padre_id: { type: DataTypes.UUID, allowNull: true },
 

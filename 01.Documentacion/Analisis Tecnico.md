@@ -17,7 +17,7 @@ Son los campos estructurales e incrementales que se guardan físicamente en la b
 * **d.** `estado`: Estado del ciclo de vida (`'pendiente'`, `'en progreso'`, `'completado'`).
 * **e.** `padre_id`: Referencia a la tarea padre (`UUID` / `entero` o `null` si es Tarea Principal / Raíz).
 * **f.** `hijos_ids` / `hijos`: Lista o conjunto de subtareas directas (`Array[ID]` o relación 1-a-N). Lista vacía (`[]`) si la tarea no tiene subtareas (nodo hoja). Permite recorrer el subárbol hacia abajo (`nodo.hijos`).
-* **g.** `indicador_urgencia` (Opcional): Etiqueta manual de urgencia o prioridad asignada.
+* **g.** `indicador_urgencia` (Opcional): Tipo Boolean
 * **h.** `peso_individual` ($PI$): `1` (Cada Tarea y Subtarea pesa 1 por sí misma).
 * **i.** `peso_grupal` ($PG$): Suma del peso total de cada uno de sus hijos directos. (Si no tiene hijos, es `0`).
 * **j.** `peso_total` ($PT$): Suma del Peso Individual y el Peso Grupal ($PT = PI + PG$).
