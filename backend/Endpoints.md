@@ -126,3 +126,50 @@
     "updatedAt": "date-time"
   }
   ```
+
+---
+
+### 5. Obtener Detalle y Árbol
+
+* **Descripción:** Recupera una tarea específica por su ID junto con todo su árbol de descendientes (subtareas anidadas). Además, inyecta dinámicamente las métricas derivadas de esfuerzo (`esfuerzo_total` y `esfuerzo_relativo`) calculadas en escala entera del 1 al 10 basándose en el Peso Total de la tarea raíz.
+* **Ruta:** `http://localhost:3001/api/tasks/:id`
+* **Método:** GET
+* **Cuerpo de la Petición (JSON Input):** No requiere body.
+* **Respuesta Esperada (Output):**
+  ```
+  {
+    "id": "UUID",
+    "titulo": "string",
+    "descripcion": "string",
+    "estado": "string",
+    "indicador_urgencia": "boolean",
+    "padre_id": "null | UUID",
+    "peso_individual": "integer",
+    "peso_grupal": "integer",
+    "peso_total": "integer",
+    "final_total": "integer",
+    "createdAt": "date-time",
+    "updatedAt": "date-time",
+    "hijos": [
+      {
+        "id": "UUID",
+        "titulo": "string",
+        "descripcion": "string",
+        "estado": "string",
+        "indicador_urgencia": "boolean",
+        "padre_id": "UUID",
+        "peso_individual": "integer",
+        "peso_grupal": "integer",
+        "peso_total": "integer",
+        "final_total": "integer",
+        "createdAt": "date-time",
+        "updatedAt": "date-time",
+        "hijos": [],
+        "esfuerzo_total": "integer",
+        "esfuerzo_relativo": "integer"
+      }
+    ],
+    "esfuerzo_total": "integer",
+    "esfuerzo_relativo": "integer"
+  }
+  ```

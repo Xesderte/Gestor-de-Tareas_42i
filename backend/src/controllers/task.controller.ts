@@ -26,7 +26,19 @@ export const getRootTasks = async (req: Request, res: Response): Promise<void> =
             where: { padre_id: null }
         });
 
-        res.status(200).json(tasks);
+        const tasksWithEffort = tasks.map(task => {
+            const ptRaiz = task.peso_total;
+            const esfuerzo_total = ptRaiz === 0 ? 0 : Math.round((task.peso_total / ptRaiz) * 10);
+            const esfuerzo_relativo = ptRaiz === 0 ? 0 : Math.round(((task.peso_total - task.final_total) / ptRaiz) * 10);
+            
+            return {
+                ...task.toJSON(),
+                esfuerzo_total,
+                esfuerzo_relativo
+            };
+        });
+
+        res.status(200).json(tasksWithEffort);
     } catch (error) {
         console.error('Error al obtener tareas raíz:', error);
         res.status(500).json({ message: 'Error interno del servidor al obtener las tareas' });

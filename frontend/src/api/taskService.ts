@@ -13,6 +13,9 @@ export interface Task {
     final_total: number;
     createdAt: string;
     updatedAt: string;
+    hijos?: Task[];
+    esfuerzo_total?: number;
+    esfuerzo_relativo?: number;
 }
 
 export interface CreateTaskDTO {
@@ -51,6 +54,26 @@ export const toggleTaskUrgency = async (id: string, indicador_urgencia: boolean)
         return response.data;
     } catch (error) {
         console.error(`Error al modificar urgencia de la tarea ${id}:`, error);
+        throw error;
+    }
+};
+
+export const getTaskById = async (id: string): Promise<Task> => {
+    try {
+        const response = await apiClient.get<Task>(`/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error al obtener la tarea ${id}:`, error);
+        throw error;
+    }
+};
+
+export const createSubtask = async (parentId: string, data: CreateTaskDTO): Promise<Task> => {
+    try {
+        const response = await apiClient.post<Task>(`/${parentId}/subtasks`, data);
+        return response.data;
+    } catch (error) {
+        console.error(`Error al crear la subtarea para ${parentId}:`, error);
         throw error;
     }
 };
