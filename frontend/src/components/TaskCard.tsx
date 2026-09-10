@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { GitBranch, Plus, Zap, Scale, Calendar, ChevronDown, Activity } from 'lucide-react';
+import { GitBranch, Plus, Zap, Scale, Calendar, ChevronDown, Activity, Pencil, Trash2, Check, X } from 'lucide-react';
 import type { Task } from '../api/taskService';
-import { toggleTaskUrgency, getTaskById, toggleTaskComplete } from '../api/taskService';
+import { toggleTaskUrgency, getTaskById, toggleTaskComplete, updateTask, deleteTask } from '../api/taskService';
 import TaskForm from './TaskForm';
 
 interface TaskCardProps {
@@ -17,6 +17,10 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
   const [children, setChildren] = useState<Task[]>(task.hijos || []);
   const [isLoadingChildren, setIsLoadingChildren] = useState(false);
   const [localTask, setLocalTask] = useState<Task>(task);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.titulo);
+  const [editDesc, setEditDesc] = useState(task.descripcion);
 
   const getStatusBadge = (estado: string) => {
     switch (estado.toLowerCase()) {
@@ -130,6 +134,36 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
     onUpdate(); // Notifica hacia arriba si es necesario
   };
 
+  const handleSaveEdit = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!editTitle.trim()) return;
+    try {
+      const updated = await updateTask(localTask.id, { titulo: editTitle.trim(), descripcion: editDesc.trim() });
+      setLocalTask(prev => ({ ...prev, titulo: updated.titulo, descripcion: updated.descripcion }));
+      setIsEditing(false);
+      onUpdate();
+    } catch (error) {
+      console.error('Error al guardar edición:', error);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const hasChildren = localTask.peso_grupal > 0;
+    const msg = hasChildren 
+      ? "¿Seguro que deseas eliminar esta tarea? Sus subtareas se moverán al nivel superior." 
+      : "¿Seguro que deseas eliminar esta tarea?";
+    
+    if (window.confirm(msg)) {
+      try {
+        await deleteTask(localTask.id);
+        onUpdate();
+      } catch (error) {
+        console.error('Error al eliminar tarea:', error);
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col relative">
       {/* Contenedor de la Tarjeta (Nodo Base) */}
@@ -140,16 +174,57 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
       >
         <div className="p-4 pr-16 relative">
           {/* Fila de Arriba: Titulo y Checkbox */}
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 w-full">
             <input 
               type="checkbox"
               checked={localTask.estado === 'finalizado'} 
               onChange={handleToggleComplete}
-              className="mt-1 w-5 h-5 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-900 transition-colors cursor-pointer"
+              className="mt-1 w-5 h-5 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-900 transition-colors cursor-pointer flex-shrink-0"
+              onClick={(e) => e.stopPropagation()}
             />
-            <h3 className={`text-base font-bold leading-tight break-words transition-colors ${localTask.estado === 'finalizado' ? 'text-slate-400 line-through' : 'text-white'}`}>
-              {localTask.titulo}
-            </h3>
+            
+            {isEditing ? (
+              <div className="flex-1 mr-4" onClick={(e) => e.stopPropagation()}>
+                <input 
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full bg-slate-800 text-white border border-slate-600 rounded px-2 py-1 mb-2 text-base font-bold focus:outline-none focus:border-blue-500"
+                  placeholder="Título de la tarea"
+                  autoFocus
+                />
+                <textarea 
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  className="w-full bg-slate-800 text-white border border-slate-600 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500 min-h-[60px]"
+                  placeholder="Descripción"
+                />
+                <div className="flex justify-end gap-2 mt-2">
+                  <button onClick={() => { setIsEditing(false); setEditTitle(localTask.titulo); setEditDesc(localTask.descripcion); }} className="p-1 rounded hover:bg-slate-700 text-slate-300">
+                    <X className="w-4 h-4" />
+                  </button>
+                  <button onClick={handleSaveEdit} className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white">
+                    <Check className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex justify-between items-start mr-2">
+                <h3 className={`text-base font-bold leading-tight break-words transition-colors ${localTask.estado === 'finalizado' ? 'text-slate-400 line-through' : 'text-white'}`}>
+                  {localTask.titulo}
+                </h3>
+                <div className="flex items-center gap-2 ml-2" onClick={(e) => e.stopPropagation()}>
+                  {localTask.estado !== 'finalizado' && (
+                    <button onClick={() => setIsEditing(true)} className="text-slate-400 hover:text-blue-400 transition-colors" title="Editar">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button onClick={handleDelete} className="text-slate-400 hover:text-red-400 transition-colors" title="Eliminar">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           {/* Fila del Medio: Métricas (Debajo del título) */}
           <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -184,17 +259,19 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
           </div>
 
           {/* Fila de Abajo (Expandible): Descripción */}
-          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
-            <div className="bg-white p-3 rounded-lg border border-slate-200">
-                <p className="text-slate-600 text-sm leading-relaxed mb-3">
-                  {localTask.descripcion}
-                </p>
-                <div className="flex items-center text-xs text-slate-400 font-medium gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" />
-                  {new Date(localTask.createdAt).toLocaleDateString()}
-                </div>
+          {(!isEditing) && (
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+              <div className="bg-white p-3 rounded-lg border border-slate-200">
+                  <p className="text-slate-600 text-sm leading-relaxed mb-3">
+                    {localTask.descripcion}
+                  </p>
+                  <div className="flex items-center text-xs text-slate-400 font-medium gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {new Date(localTask.createdAt).toLocaleDateString()}
+                  </div>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Botones de Acción Derecho (Absolutos) */}
           <div className="absolute top-0 right-0 h-full w-12 flex flex-col border-l border-slate-700 bg-slate-800/50">

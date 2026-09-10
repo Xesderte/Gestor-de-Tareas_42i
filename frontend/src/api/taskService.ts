@@ -38,6 +38,25 @@ export const getRootTasks = async (): Promise<Task[]> => {
     }
 };
 
+export const updateTask = async (id: string, data: { titulo?: string; descripcion?: string; indicador_urgencia?: boolean }): Promise<Task> => {
+    try {
+        const response = await apiClient.put<Task>(`/${id}`, data);
+        return response.data;
+    } catch (error) {
+        console.error(`Error al actualizar la tarea ${id}:`, error);
+        throw error;
+    }
+};
+
+export const deleteTask = async (id: string): Promise<void> => {
+    try {
+        await apiClient.delete(`/${id}`);
+    } catch (error) {
+        console.error(`Error al eliminar la tarea ${id}:`, error);
+        throw error;
+    }
+};
+
 export const toggleTaskComplete = async (taskId: string, completed: boolean): Promise<Task> => {
     try {
         const response = await apiClient.patch<Task>(`/${taskId}/complete`, { completed });

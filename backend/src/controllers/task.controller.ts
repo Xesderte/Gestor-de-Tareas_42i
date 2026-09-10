@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Task } from '../db';
-import { PropagarIncrementoPeso, PropagarAvanceProgreso } from '../utils/task.utils';
+import { PropagarIncrementoPeso, PropagarAvanceProgreso, PropagarEliminacionNodo } from '../utils/task.utils';
 
 export const createRootTask = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -248,7 +248,70 @@ export const toggleTaskComplete = async (req: Request, res: Response): Promise<v
         });
     } catch (error) {
         console.error('Error al cambiar el estado de completado:', error);
-        res.status(500).json({ message: 'Error interno del servidor al actualizar la tarea' });
+        res.status(500).json({ message: 'Error interno del servidor' });
     }
 };
 
+export const updateTask = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const { titulo, descripcion, indicador_urgencia } = req.body;
+
+        const task = await Task.findByPk(id as string);
+        if (!task) {
+            res.status(404).json({ message: 'Tarea no encontrada' });
+            return;
+        }
+
+        if (task.estado === 'finalizado') {
+            res.status(400).json({ message: 'No se puede editar una tarea que ya está finalizada.' });
+            return;
+        }
+
+        await task.update({
+            titulo: titulo !== undefined ? titulo : task.titulo,
+            descripcion: descripcion !== undefined ? descripcion : task.descripcion,
+            indicador_urgencia: indicador_urgencia !== undefined ? indicador_urgencia : task.indicador_urgencia
+        });
+
+        // Devolvemos la tarea
+        res.status(200).json(task);
+    } catch (error) {
+        console.error('Error al actualizar la tarea:', error);
+        res.status(500).json({ message: 'Error interno del servidor' });
+    }
+};
+
+export const deleteTask = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+
+        const task = await Task.findByPk(id as string);
+        if (!task) {
+            res.status(404).json({ message: 'Tarea no encontrada' });
+            return;
+        }
+
+        const estabaFinalizada = task.estado === 'finalizado';
+        const padreId = task.padre_id;
+
+        // 1. Re-enlace (re-parenting) de los hijos al abuelo (el padre de esta tarea)
+        await Task.update(
+            { padre_id: padreId },
+            { where: { padre_id: task.id } }
+        );
+
+        // 2. Propagar la eliminación matemática hacia los ascendientes
+        if (padreId) {
+            await PropagarEliminacionNodo(padreId, estabaFinalizada);
+        }
+
+        // 3. Eliminar la tarea físicamente
+        await task.destroy();
+
+        res.status(200).json({ message: 'Tarea eliminada exitosamente' });
+    } catch (error) {
+        console.error('Error al eliminar la tarea:', error);
+        res.status(500).json({ message: 'Error interno del servidor' });
+    }
+};

@@ -72,3 +72,48 @@ export const PropagarAvanceProgreso = async (tareaId: string | number | null, de
         await PropagarAvanceProgreso(tarea.padre_id, delta);
     }
 };
+
+/**
+ * Propaga recursivamente la eliminación de un nodo (resta su peso y final_total) de manera bottom-up.
+ * También deduce y actualiza el estado (pendiente, progreso, finalizado) de la tarea padre.
+ * 
+ * @param tareaId El ID del padre al que hay que restarle.
+ * @param estabaFinalizado Booleano que indica si la tarea eliminada estaba finalizada.
+ */
+export const PropagarEliminacionNodo = async (tareaId: string | number | null, estabaFinalizado: boolean): Promise<void> => {
+    if (!tareaId) return;
+
+    const tarea = await Task.findByPk(tareaId);
+    if (!tarea) return;
+
+    // Restamos 1 al peso total y grupal
+    const nuevoPesoTotal = Math.max(1, tarea.peso_total - 1);
+    const nuevoPesoGrupal = Math.max(0, tarea.peso_grupal - 1);
+    
+    // Si la tarea eliminada estaba finalizada, restamos 1 al final_total
+    const deltaFinal = estabaFinalizado ? -1 : 0;
+    const nuevoFinalTotal = Math.max(0, Math.min(tarea.final_total + deltaFinal, nuevoPesoTotal));
+
+    // Determinar nuevo estado
+    let nuevoEstado = 'pendiente';
+    if (nuevoFinalTotal === 0) {
+        nuevoEstado = 'pendiente';
+    } else if (nuevoFinalTotal === nuevoPesoTotal) {
+        nuevoEstado = 'finalizado';
+    } else {
+        nuevoEstado = 'progreso';
+    }
+
+    // Actualizamos la tarea directamente
+    await tarea.update({
+        peso_total: nuevoPesoTotal,
+        peso_grupal: nuevoPesoGrupal,
+        final_total: nuevoFinalTotal,
+        estado: nuevoEstado
+    });
+
+    // Recursividad hacia el abuelo
+    if (tarea.padre_id !== null) {
+        await PropagarEliminacionNodo(tarea.padre_id, estabaFinalizado);
+    }
+};
