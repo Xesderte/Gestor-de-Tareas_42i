@@ -67,7 +67,16 @@ export const toggleUrgencyTask = async (req: Request, res: Response): Promise<vo
             indicador_urgencia: indicador_urgencia === true || indicador_urgencia === 'true'
         });
 
-        res.status(200).json(task);
+        const rootTask = await getRootTask(id as string);
+        const ptRaiz = rootTask ? rootTask.peso_total : 0;
+        const esfuerzo_total = ptRaiz === 0 ? 0 : Math.round((task.peso_total / ptRaiz) * 10);
+        const esfuerzo_relativo = ptRaiz === 0 ? 0 : Math.round(((task.peso_total - task.final_total) / ptRaiz) * 10);
+
+        res.status(200).json({
+            ...task.toJSON(),
+            esfuerzo_total,
+            esfuerzo_relativo
+        });
     } catch (error) {
         console.error('Error al modificar la urgencia de la tarea:', error);
         res.status(500).json({ message: 'Error interno del servidor al actualizar la tarea' });
@@ -83,6 +92,11 @@ export const createSubtask = async (req: Request, res: Response): Promise<void> 
         
         if (!parentTask) {
             res.status(404).json({ message: 'La tarea padre no existe' });
+            return;
+        }
+
+        if (parentTask.estado === 'finalizado') {
+            res.status(400).json({ message: 'No se pueden crear subtareas en una tarea finalizada. Desmárcala primero.' });
             return;
         }
 
@@ -179,11 +193,20 @@ export const toggleTaskComplete = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        const isCurrentlyCompleted = task.estado === 'completado';
+        const isCurrentlyCompleted = task.estado === 'finalizado';
 
         // Si ya está en el estado deseado, no hacemos nada
         if (completed === isCurrentlyCompleted) {
-            res.status(200).json(task);
+            const rootTask = await getRootTask(id as string);
+            const ptRaiz = rootTask ? rootTask.peso_total : 0;
+            const esfuerzo_total = ptRaiz === 0 ? 0 : Math.round((task.peso_total / ptRaiz) * 10);
+            const esfuerzo_relativo = ptRaiz === 0 ? 0 : Math.round(((task.peso_total - task.final_total) / ptRaiz) * 10);
+
+            res.status(200).json({
+                ...task.toJSON(),
+                esfuerzo_total,
+                esfuerzo_relativo
+            });
             return;
         }
 
@@ -201,8 +224,8 @@ export const toggleTaskComplete = async (req: Request, res: Response): Promise<v
             // para evitar colisiones matemáticas en final_total
             if (task.padre_id) {
                 const padre = await Task.findByPk(task.padre_id);
-                if (padre && padre.estado === 'completado') {
-                    res.status(400).json({ message: 'No puedes desmarcar esta tarea porque su tarea superior ya fue completada. Desmárcala primero.' });
+                if (padre && padre.estado === 'finalizado') {
+                    res.status(400).json({ message: 'No puedes desmarcar esta tarea porque su tarea superior ya fue finalizada. Desmárcala primero.' });
                     return;
                 }
             }
@@ -212,7 +235,17 @@ export const toggleTaskComplete = async (req: Request, res: Response): Promise<v
         }
 
         const updatedTask = await Task.findByPk(id as string);
-        res.status(200).json(updatedTask);
+        
+        const rootTask = await getRootTask(id as string);
+        const ptRaiz = rootTask ? rootTask.peso_total : 0;
+        const esfuerzo_total = ptRaiz === 0 ? 0 : Math.round((updatedTask!.peso_total / ptRaiz) * 10);
+        const esfuerzo_relativo = ptRaiz === 0 ? 0 : Math.round(((updatedTask!.peso_total - updatedTask!.final_total) / ptRaiz) * 10);
+
+        res.status(200).json({
+            ...updatedTask!.toJSON(),
+            esfuerzo_total,
+            esfuerzo_relativo
+        });
     } catch (error) {
         console.error('Error al cambiar el estado de completado:', error);
         res.status(500).json({ message: 'Error interno del servidor al actualizar la tarea' });

@@ -12,7 +12,7 @@ export class Task extends Model {
     declare public id: string;
     declare public titulo: string;
     declare public descripcion: string;
-    declare public estado: string;
+    declare public estado: 'pendiente' | 'progreso' | 'finalizado';
     declare public indicador_urgencia: boolean;
 
     declare public padre_id: string | null;
@@ -33,7 +33,10 @@ Task.init(
         },
         titulo: { type: DataTypes.STRING, allowNull: false },
         descripcion: { type: DataTypes.TEXT, allowNull: false },
-        estado: { type: DataTypes.STRING, defaultValue: 'pendiente' },
+        estado: { 
+            type: DataTypes.ENUM('pendiente', 'progreso', 'finalizado'), 
+            defaultValue: 'pendiente' 
+        },
         indicador_urgencia: { type: DataTypes.BOOLEAN, defaultValue: false },
 
         padre_id: { type: DataTypes.UUID, allowNull: true },

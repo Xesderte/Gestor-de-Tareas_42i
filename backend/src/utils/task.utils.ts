@@ -56,9 +56,9 @@ export const PropagarAvanceProgreso = async (tareaId: string | number | null, de
     if (finalTotalSeguro === 0) {
         nuevoEstado = 'pendiente';
     } else if (finalTotalSeguro === tarea.peso_total) {
-        nuevoEstado = 'completado';
+        nuevoEstado = 'finalizado';
     } else {
-        nuevoEstado = 'en progreso';
+        nuevoEstado = 'progreso';
     }
 
     // Actualizamos la tarea directamente

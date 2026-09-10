@@ -20,10 +20,12 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
 
   const getStatusBadge = (estado: string) => {
     switch (estado.toLowerCase()) {
-      case 'completado':
-        return <span className="px-2 py-0.5 text-[10px] font-bold tracking-wide text-emerald-800 bg-emerald-100 rounded-full border border-emerald-200 uppercase">Pendiente</span>; // Placeholder if needed
-      case 'en progreso':
-        return <span className="px-2 py-0.5 text-[10px] font-bold tracking-wide text-blue-800 bg-blue-100 rounded-full border border-blue-200 uppercase">Progreso</span>;
+      case 'finalizado':
+        return <span className="px-2 py-0.5 text-[10px] font-bold tracking-wide text-black bg-green-500 rounded-full border border-green-600 uppercase">Finalizado</span>;
+      case 'progreso':
+        return <span className="px-2 py-0.5 text-[10px] font-bold tracking-wide text-black bg-yellow-400 rounded-full border border-yellow-500 uppercase">Progreso</span>;
+      case 'pendiente':
+        return <span className="px-2 py-0.5 text-[10px] font-bold tracking-wide text-black bg-rose-400 rounded-full border border-rose-500 uppercase">Pendiente</span>;
       default:
         return <span className="px-2 py-0.5 text-[10px] font-bold tracking-wide text-slate-700 bg-slate-100 rounded-full border border-slate-200 uppercase">Pendiente</span>;
     }
@@ -138,14 +140,14 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
       >
         <div className="p-4 pr-16 relative">
           {/* Fila de Arriba: Titulo y Checkbox */}
-          <div className="flex items-start gap-3 pr-4" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-start gap-3">
             <input 
-              type="checkbox" 
-              className="mt-1 w-4 h-4 rounded text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900 bg-slate-800 border-slate-600 cursor-pointer" 
-              checked={localTask.estado === 'completado'} 
-              onChange={handleToggleComplete} 
+              type="checkbox"
+              checked={localTask.estado === 'finalizado'} 
+              onChange={handleToggleComplete}
+              className="mt-1 w-5 h-5 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-900 transition-colors cursor-pointer"
             />
-            <h3 className={`text-base font-bold leading-tight break-words transition-colors ${localTask.estado === 'completado' ? 'text-slate-400 line-through' : 'text-white'}`}>
+            <h3 className={`text-base font-bold leading-tight break-words transition-colors ${localTask.estado === 'finalizado' ? 'text-slate-400 line-through' : 'text-white'}`}>
               {localTask.titulo}
             </h3>
           </div>
@@ -215,9 +217,14 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
               </div>
             )}
             <button 
-                onClick={handleAddSubtaskClick}
-                className="flex-1 flex items-center justify-center text-white bg-blue-700 hover:bg-blue-600 transition-colors"
-                title="Añadir subtarea"
+                onClick={localTask.estado === 'finalizado' ? undefined : handleAddSubtaskClick}
+                className={`flex-1 flex items-center justify-center transition-colors ${
+                  localTask.estado === 'finalizado' 
+                    ? 'text-slate-500 bg-slate-800 cursor-not-allowed' 
+                    : 'text-white bg-blue-700 hover:bg-blue-600'
+                }`}
+                title={localTask.estado === 'finalizado' ? "No puedes añadir subtareas a una tarea finalizada" : "Añadir subtarea"}
+                disabled={localTask.estado === 'finalizado'}
             >
               <Plus className="w-6 h-6" />
             </button>
