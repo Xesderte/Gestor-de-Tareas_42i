@@ -54,9 +54,10 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
       const updatedTask = await toggleTaskComplete(localTask.id, isCompleted);
       setLocalTask(updatedTask);
       onUpdate(); // Para propagar los cambios de FT hacia arriba
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al cambiar estado completado:', error);
-      alert("Hubo un error al intentar completar la tarea. Por favor, verifica las subtareas.");
+      const errorMessage = error.response?.data?.message || "Hubo un error al intentar actualizar la tarea.";
+      alert(errorMessage);
     }
   };
 
@@ -97,6 +98,20 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
       }
     }
     setIsAddingSubtask(true);
+  };
+
+  const handleChildUpdate = async () => {
+    // Si la rama está abierta o somos el padre afectado, recargamos nuestro estado local desde el backend
+    // Esto asegura que si un hijo se completó, el padre también refleje el nuevo final_total y la barra de progreso
+    try {
+      const fullTask = await getTaskById(localTask.id);
+      setLocalTask(fullTask);
+      setChildren(fullTask.hijos || []);
+    } catch (error) {
+      console.error('Error al refrescar la rama:', error);
+    }
+    // Propagamos la actualización hacia el abuelo
+    onUpdate();
   };
 
   const handleSubtaskCreated = async () => {
@@ -233,7 +248,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
                       {/* Dot tocando exactamente la tarjeta hijo */}
                       <div className="absolute -left-[4.5px] top-[19.5px] w-3 h-3 bg-emerald-500 rounded-full z-50 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
                       
-                      <TaskCard task={hijo} onUpdate={onUpdate} isRoot={false} />
+                      <TaskCard task={hijo} onUpdate={handleChildUpdate} isRoot={false} />
                     </div>
                   );
                 })}

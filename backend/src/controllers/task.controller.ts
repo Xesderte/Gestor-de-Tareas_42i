@@ -196,6 +196,17 @@ export const toggleTaskComplete = async (req: Request, res: Response): Promise<v
             }
             await PropagarAvanceProgreso(task.id, 1);
         } else {
+            // Validacion top-down para desmarcar: 
+            // Si la tarea superior ya está completada, no se puede desmarcar un hijo 
+            // para evitar colisiones matemáticas en final_total
+            if (task.padre_id) {
+                const padre = await Task.findByPk(task.padre_id);
+                if (padre && padre.estado === 'completado') {
+                    res.status(400).json({ message: 'No puedes desmarcar esta tarea porque su tarea superior ya fue completada. Desmárcala primero.' });
+                    return;
+                }
+            }
+
             // Si la desmarcamos, restamos 1 al árbol
             await PropagarAvanceProgreso(task.id, -1);
         }
