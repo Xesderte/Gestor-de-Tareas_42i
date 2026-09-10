@@ -23,6 +23,14 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true, isUr
   const [editTitle, setEditTitle] = useState(task.titulo);
   const [editDesc, setEditDesc] = useState(task.descripcion);
 
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 4000);
+  };
+
   const getStatusBadge = (estado: string) => {
     switch (estado.toLowerCase()) {
       case 'finalizado':
@@ -53,7 +61,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true, isUr
     // Si tiene hijos y no están todos completados, backend lo rechazará, 
     // pero podemos prevenir clicks inútiles si final_total < peso_grupal
     if (isCompleted && localTask.final_total < localTask.peso_grupal) {
-      alert("No puedes completar esta tarea porque tiene subtareas pendientes.");
+      showToast("No puedes completar esta tarea porque tiene subtareas pendientes.");
       return;
     }
 
@@ -64,7 +72,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true, isUr
     } catch (error: any) {
       console.error('Error al cambiar estado completado:', error);
       const errorMessage = error.response?.data?.message || "Hubo un error al intentar actualizar la tarea.";
-      alert(errorMessage);
+      showToast(errorMessage);
     }
   };
 
@@ -156,25 +164,49 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true, isUr
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const hasChildren = localTask.peso_grupal > 0;
-    const msg = hasChildren 
-      ? "¿Seguro que deseas eliminar esta tarea? Sus subtareas se moverán al nivel superior." 
-      : "¿Seguro que deseas eliminar esta tarea?";
-    
-    if (window.confirm(msg)) {
-      try {
-        await deleteTask(localTask.id);
-        onUpdate();
-      } catch (error) {
-        console.error('Error al eliminar tarea:', error);
-      }
+  const confirmDeleteAction = async () => {
+    try {
+      await deleteTask(localTask.id);
+      onUpdate();
+    } catch (error) {
+      console.error('Error al eliminar tarea:', error);
     }
+    setConfirmDelete(false);
   };
 
   return (
     <div className="flex flex-col relative">
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="fixed top-6 right-6 z-50 bg-[#2d241e] border border-orange-900/50 shadow-xl shadow-orange-900/20 rounded-xl p-4 text-orange-200 text-sm max-w-sm animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="font-bold text-orange-400 mb-1 flex justify-between items-center">
+            <span>Notificación</span>
+            <button onClick={() => setToastMsg(null)}><X className="w-4 h-4 hover:text-orange-300" /></button>
+          </div>
+          <p>{toastMsg}</p>
+        </div>
+      )}
+
+      {/* Custom Confirm Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-[#1f1612] border border-orange-900/30 shadow-2xl rounded-2xl p-6 max-w-sm w-full animate-in zoom-in-95 duration-200">
+            <h4 className="text-orange-400 font-bold text-lg mb-2">Eliminar Tarea</h4>
+            <p className="text-orange-200 text-sm mb-6">
+              ¿Seguro que deseas eliminar la tarea <strong>{localTask.titulo}</strong>?<br/><br/>
+              {localTask.peso_grupal > 0 && "Sus subtareas se moverán al nivel superior."}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setConfirmDelete(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-orange-300 hover:bg-orange-900/20 transition-colors border border-orange-900/50">
+                Cancelar
+              </button>
+              <button onClick={confirmDeleteAction} className="px-4 py-2 rounded-xl text-sm font-medium bg-orange-600 hover:bg-orange-500 text-white shadow-lg shadow-orange-600/20 transition-all">
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Contenedor de la Tarjeta (Nodo Base) */}
       <div 
         onClick={() => setIsExpanded(!isExpanded)}
@@ -229,7 +261,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true, isUr
                     </button>
                   )}
                   <button 
-                    onClick={localTask.indicador_urgencia ? () => alert("Las tareas urgentes no se pueden eliminar. Quita la urgencia primero.") : handleDelete} 
+                    onClick={localTask.indicador_urgencia ? () => showToast("Las tareas urgentes no se pueden eliminar. Quita la urgencia primero.") : () => setConfirmDelete(true)} 
                     className={`transition-colors ${localTask.indicador_urgencia ? 'text-slate-600 cursor-not-allowed' : 'text-slate-400 hover:text-red-400'}`} 
                     title={localTask.indicador_urgencia ? "No se pueden eliminar tareas urgentes" : "Eliminar"}
                   >
