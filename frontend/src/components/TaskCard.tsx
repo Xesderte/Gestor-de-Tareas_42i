@@ -8,9 +8,10 @@ interface TaskCardProps {
   task: Task;
   onUpdate: () => void; // Para recargar desde el padre si es necesario
   isRoot?: boolean;
+  isUrgentView?: boolean;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true, isUrgentView = false }) => {
   const [isExpanded, setIsExpanded] = useState(false); // Expande descripción
   const [isTreeOpen, setIsTreeOpen] = useState(false); // Expande subtareas
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
@@ -70,6 +71,10 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
   const handleToggleTree = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isTreeOpen) {
+      if (isUrgentView) {
+        setIsTreeOpen(true);
+        return;
+      }
       // Si vamos a abrir, pedimos el detalle al backend para tener el árbol fresco
       setIsLoadingChildren(true);
       try {
@@ -107,6 +112,10 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
   };
 
   const handleChildUpdate = async () => {
+    if (isUrgentView) {
+      onUpdate();
+      return;
+    }
     // Si la rama está abierta o somos el padre afectado, recargamos nuestro estado local desde el backend
     // Esto asegura que si un hijo se completó, el padre también refleje el nuevo final_total y la barra de progreso
     try {
@@ -219,7 +228,11 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
                       <Pencil className="w-4 h-4" />
                     </button>
                   )}
-                  <button onClick={handleDelete} className="text-slate-400 hover:text-red-400 transition-colors" title="Eliminar">
+                  <button 
+                    onClick={localTask.indicador_urgencia ? () => alert("Las tareas urgentes no se pueden eliminar. Quita la urgencia primero.") : handleDelete} 
+                    className={`transition-colors ${localTask.indicador_urgencia ? 'text-slate-600 cursor-not-allowed' : 'text-slate-400 hover:text-red-400'}`} 
+                    title={localTask.indicador_urgencia ? "No se pueden eliminar tareas urgentes" : "Eliminar"}
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -294,14 +307,14 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
               </div>
             )}
             <button 
-                onClick={localTask.estado === 'finalizado' ? undefined : handleAddSubtaskClick}
+                onClick={localTask.estado === 'finalizado' || isUrgentView ? undefined : handleAddSubtaskClick}
                 className={`flex-1 flex items-center justify-center transition-colors ${
-                  localTask.estado === 'finalizado' 
+                  localTask.estado === 'finalizado' || isUrgentView
                     ? 'text-slate-500 bg-slate-800 cursor-not-allowed' 
                     : 'text-white bg-blue-700 hover:bg-blue-600'
                 }`}
-                title={localTask.estado === 'finalizado' ? "No puedes añadir subtareas a una tarea finalizada" : "Añadir subtarea"}
-                disabled={localTask.estado === 'finalizado'}
+                title={isUrgentView ? "No puedes añadir subtareas en la vista urgente" : localTask.estado === 'finalizado' ? "No puedes añadir subtareas a una tarea finalizada" : "Añadir subtarea"}
+                disabled={localTask.estado === 'finalizado' || isUrgentView}
             >
               <Plus className="w-6 h-6" />
             </button>
@@ -332,7 +345,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, isRoot = true }) =>
                       {/* Dot tocando exactamente la tarjeta hijo */}
                       <div className="absolute -left-[4.5px] top-[19.5px] w-3 h-3 bg-emerald-500 rounded-full z-50 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
                       
-                      <TaskCard task={hijo} onUpdate={handleChildUpdate} isRoot={false} />
+                      {/* La Tarjeta Recursiva (El Hijo) */}
+                      <TaskCard 
+                        task={hijo} 
+                        onUpdate={handleChildUpdate} 
+                        isRoot={false} 
+                        isUrgentView={isUrgentView}
+                      />
                     </div>
                   );
                 })}

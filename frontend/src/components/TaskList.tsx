@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { Task } from '../api/taskService';
-import { getRootTasks } from '../api/taskService';
+import { getRootTasks, getUrgentTree } from '../api/taskService';
 import TaskCard from './TaskCard';
 import TaskForm from './TaskForm';
 
@@ -17,7 +17,7 @@ const TaskList: React.FC<TaskListProps> = ({ refreshKey = 0, isAddingRoot, setIs
 
   const fetchTasks = async () => {
     try {
-      const data = await getRootTasks();
+      const data = filterUrgent ? await getUrgentTree() : await getRootTasks();
       setTasks(data);
     } catch (error) {
       console.error('Error al cargar las tareas:', error);
@@ -27,8 +27,9 @@ const TaskList: React.FC<TaskListProps> = ({ refreshKey = 0, isAddingRoot, setIs
   };
 
   useEffect(() => {
+    setLoading(true);
     fetchTasks();
-  }, [refreshKey]);
+  }, [refreshKey, filterUrgent]);
 
   if (loading) {
     return (
@@ -38,7 +39,7 @@ const TaskList: React.FC<TaskListProps> = ({ refreshKey = 0, isAddingRoot, setIs
     );
   }
 
-  const filteredTasks = filterUrgent ? tasks.filter(t => t.indicador_urgencia) : tasks;
+  const filteredTasks = tasks;
 
   return (
     <div className="w-full max-w-4xl flex flex-col items-start px-12 py-10">
@@ -71,6 +72,7 @@ const TaskList: React.FC<TaskListProps> = ({ refreshKey = 0, isAddingRoot, setIs
                 key={task.id} 
                 task={task} 
                 onUpdate={fetchTasks} 
+                isUrgentView={filterUrgent}
             />
           ))}
         </div>

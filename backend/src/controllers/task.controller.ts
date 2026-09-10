@@ -292,6 +292,11 @@ export const deleteTask = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
+        if (task.indicador_urgencia) {
+            res.status(400).json({ message: 'Las tareas urgentes no se pueden eliminar. Quita la urgencia primero.' });
+            return;
+        }
+
         const estabaFinalizada = task.estado === 'finalizado';
         const padreId = task.padre_id;
 
@@ -312,6 +317,68 @@ export const deleteTask = async (req: Request, res: Response): Promise<void> => 
         res.status(200).json({ message: 'Tarea eliminada exitosamente' });
     } catch (error) {
         console.error('Error al eliminar la tarea:', error);
+        res.status(500).json({ message: 'Error interno del servidor' });
+    }
+};
+
+export const getUrgentTree = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const allTasks = await Task.findAll();
+        
+        const allTasksMap = new Map<string, any>();
+        allTasks.forEach(t => allTasksMap.set(t.id, t));
+
+        // Helper para buscar la raíz absoluta
+        const getRealRoot = (id: string) => {
+            let curr = allTasksMap.get(id);
+            while (curr && curr.padre_id) {
+                curr = allTasksMap.get(curr.padre_id);
+            }
+            return curr;
+        };
+
+        // Map final con las métricas inyectadas y arreglo de hijos
+        const taskMap = new Map<string, any>();
+        allTasks.forEach(t => {
+            const root = getRealRoot(t.id);
+            const ptRaiz = root ? root.peso_total : 0;
+            const esfuerzo_total = ptRaiz === 0 ? 0 : Math.round((t.peso_total / ptRaiz) * 10);
+            const esfuerzo_relativo = ptRaiz === 0 ? 0 : Math.round(((t.peso_total - t.final_total) / ptRaiz) * 10);
+
+            taskMap.set(t.id, { ...t.toJSON(), hijos: [], esfuerzo_total, esfuerzo_relativo });
+        });
+
+        const urgentRoots: any[] = [];
+        const urgentTasks = allTasks.filter(t => t.indicador_urgencia);
+
+        for (const t of urgentTasks) {
+            const taskObj = taskMap.get(t.id);
+            
+            // Buscar hacia arriba el primer ancestro que también sea urgente
+            let currentPadreId = t.padre_id;
+            let foundUrgentAncestor = false;
+
+            while (currentPadreId !== null) {
+                const padre = taskMap.get(currentPadreId);
+                if (!padre) break;
+
+                if (padre.indicador_urgencia) {
+                    padre.hijos.push(taskObj);
+                    foundUrgentAncestor = true;
+                    break;
+                } else {
+                    currentPadreId = padre.padre_id;
+                }
+            }
+
+            if (!foundUrgentAncestor) {
+                urgentRoots.push(taskObj);
+            }
+        }
+
+        res.status(200).json(urgentRoots);
+    } catch (error) {
+        console.error('Error al obtener el árbol urgente:', error);
         res.status(500).json({ message: 'Error interno del servidor' });
     }
 };

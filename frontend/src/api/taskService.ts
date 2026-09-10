@@ -38,6 +38,16 @@ export const getRootTasks = async (): Promise<Task[]> => {
     }
 };
 
+export const getUrgentTree = async (): Promise<Task[]> => {
+    try {
+        const response = await apiClient.get<Task[]>('/urgent-tree');
+        return response.data;
+    } catch (error) {
+        console.error('Error al obtener árbol urgente:', error);
+        throw error;
+    }
+};
+
 export const updateTask = async (id: string, data: { titulo?: string; descripcion?: string; indicador_urgencia?: boolean }): Promise<Task> => {
     try {
         const response = await apiClient.put<Task>(`/${id}`, data);
